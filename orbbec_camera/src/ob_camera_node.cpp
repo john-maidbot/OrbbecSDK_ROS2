@@ -471,10 +471,11 @@ void OBCameraNode::setupDepthPostProcessFilter() {
   auto depth_sensor = device_->getSensor(OB_SENSOR_DEPTH);
   // set depth sensor to filter
   filter_list_ = depth_sensor->createRecommendedFilters();
-  if (!filter_list_.empty()) {
-    // RCLCPP_ERROR(logger_, "Failed to get depth sensor filter list");
+  if (filter_list_.empty()) {
+    RCLCPP_ERROR(logger_, "Failed to get depth sensor filter list");
     return;
   }
+  
   for (size_t i = 0; i < filter_list_.size(); i++) {
     auto filter = filter_list_[i];
     std::map<std::string, bool> filter_params = {
@@ -1368,6 +1369,34 @@ void OBCameraNode::setupPublishers() {
             *node_, "color/image_undistorted", image_qos_profile);
       }
     }
+  }
+
+  if (enable_ldp_){
+    std::string ldp_topic = "ldp_range";
+    auto ldp_qos_profile = rclcpp::SensorDataQoS();
+    ldp_publisher_ = node_->create_publisher<sensor_msgs::msg::Range>(ldp_topic, ldp_qos_profile);
+    ldp_timer_ = rclcpp::create_timer(node_, node_->get_clock(), rclcpp::Duration(1s), [this]() {
+      int distance = 0;
+      try {
+        distance = static_cast<float>(device_->getIntProperty(OB_PROP_LDP_MEASURE_DISTANCE_INT));
+      } catch (const ob::Error& e) {
+        return;
+      } catch (const std::exception& e) {
+        return;
+      } catch (...) {
+        return;
+      }
+
+      sensor_msgs::msg::Range msg;
+      msg.header.stamp = node_->now();
+      msg.header.frame_id = camera_link_frame_id_;
+      msg.radiation_type = sensor_msgs::msg::Range::INFRARED;
+      msg.field_of_view = 0.1;
+      msg.min_range = 0.0;
+      msg.max_range = 10.0;
+      msg.range = distance / 1000.0;
+      ldp_publisher_->publish(msg);
+    });
   }
 
   if (enable_sync_output_accel_gyro_) {
