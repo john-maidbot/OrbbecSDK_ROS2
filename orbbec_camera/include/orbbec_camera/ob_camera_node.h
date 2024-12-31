@@ -27,6 +27,7 @@
 #include <vector>
 #include <atomic>
 #include <opencv2/opencv.hpp>
+#include <sensor_msgs/msg/range.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <tf2_ros/static_transform_broadcaster.h>
@@ -618,5 +619,10 @@ class OBCameraNode {
   bool interleave_frame_enable_ = false;
   bool interleave_skip_enable_ = false;
   int interleave_skip_index_ = 1;
+
+  // LDP publisher
+  rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr ldp_publisher_;
+  rclcpp::TimerBase::SharedPtr ldp_timer_;
+
 };
 }  // namespace orbbec_camera
